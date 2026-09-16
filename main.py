@@ -13,34 +13,39 @@ def main():
     print(f"Знайдено {len(raw_news)} новин")
     
     print("Фільтрація...")
-    filtered_news = filter_and_classify(raw_news)
+    filtered_news = filter_and_classify(raw_news, config.DIGEST_LANGUAGE)
     print(f"Відфільтровано {len(filtered_news)} новин")
     
     save_news(filtered_news)
+    
     clear_old_news(days=1)
     
     unprocessed = get_unprocessed_news(limit=50)
     
     if not unprocessed:
-        print("Немає нових новин")
+        print("Немає нових новин для відправки")
         return
     
     print("Генерація дайджесту...")
     digest = generate_digest(unprocessed, config.DIGEST_LANGUAGE)
     
+    # Перевіряємо довжину
     if len(digest) > 4000:
-        print("Скорочуємо...")
+        print(f"Повідомлення занадто довге ({len(digest)} символів), скорочуємо...")
         unprocessed = get_unprocessed_news(limit=30)
         digest = generate_digest(unprocessed, config.DIGEST_LANGUAGE)
     
-    print("Відправка...")
+    print("Відправка в Telegram...")
+    print(f"Довжина повідомлення: {len(digest)} символів")
     result = send_to_telegram(digest)
     
     if result.get('ok'):
-        print("Успішно!")
+        print("Успішно відправлено!")
         mark_as_processed(unprocessed)
     else:
-        print(f"Помилка: {result}")
+        print(f"Помилка відправки: {result}")
+    
+    clear_old_news(days=7)
 
 if __name__ == "__main__":
     main()

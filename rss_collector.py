@@ -1,21 +1,28 @@
 import feedparser
 from datetime import datetime, timedelta
+import config
 import re
 
 def fetch_rss_feeds():
     news = []
     cutoff = datetime.now() - timedelta(hours=26)
     
-    for feed_url in RSS_FEEDS:
+    for feed_url in config.RSS_FEEDS:
         try:
             feed = feedparser.parse(feed_url)
             source = feed.feed.get('title', feed_url)
             
             for entry in feed.entries[:50]:
                 published = datetime.now()
+                
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
                     try:
                         published = datetime(*entry.published_parsed[:6])
+                    except:
+                        pass
+                elif hasattr(entry, 'updated_parsed') and entry.updated_parsed:
+                    try:
+                        published = datetime(*entry.updated_parsed[:6])
                     except:
                         pass
                 
@@ -32,7 +39,7 @@ def fetch_rss_feeds():
                     'published': published.isoformat(),
                     'category': 'uncategorized'
                 })
-        except:
-            pass
+        except Exception as e:
+            print(f"Помилка завантаження {feed_url}: {e}")
     
     return news

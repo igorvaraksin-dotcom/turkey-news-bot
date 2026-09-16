@@ -1,8 +1,10 @@
 import sqlite3
 from datetime import datetime
 
+DB_PATH = "news.db"
+
 def init_db():
-    conn = sqlite3.connect("news.db")
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS news (
@@ -20,7 +22,7 @@ def init_db():
     conn.close()
 
 def save_news(news_list):
-    conn = sqlite3.connect("news.db")
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     for item in news_list:
         try:
@@ -29,13 +31,13 @@ def save_news(news_list):
                 VALUES (?, ?, ?, ?, ?, ?)
             ''', (item['title'], item['summary'], item['link'], item['source'], 
                   item['published'], item['category']))
-        except:
-            pass
+        except sqlite3.IntegrityError:
+            pass  # дублікат
     conn.commit()
     conn.close()
 
-def get_unprocessed_news(limit=50):
-    conn = sqlite3.connect("news.db")
+def get_unprocessed_news(limit=30):
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''
         SELECT title, summary, link, source, category 
@@ -46,19 +48,29 @@ def get_unprocessed_news(limit=50):
     ''', (limit,))
     rows = cursor.fetchall()
     conn.close()
-    return [{'title': r[0], 'summary': r[1], 'link': r[2], 'source': r[3], 'category': r[4]} for r in rows]
+    return [{
+        'title': r[0],
+        'summary': r[1],
+        'link': r[2],
+        'source': r[3],
+        'category': r[4]
+    } for r in rows]
 
 def mark_as_processed(news_list):
-    conn = sqlite3.connect("news.db")
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     for item in news_list:
-        cursor.execute('UPDATE news SET processed = 1 WHERE link = ?', (item['link'],))
+        cursor.execute('''
+            UPDATE news SET processed = 1 WHERE link = ?
+        ''', (item['link'],))
     conn.commit()
     conn.close()
 
 def clear_old_news(days=7):
-    conn = sqlite3.connect("news.db")
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM news WHERE processed = 1")
+    cursor.execute('''
+        DELETE FROM news WHERE processed = 1 AND published < datetime('now', '-' || ? || ' days')
+    ''', (days,))
     conn.commit()
     conn.close()

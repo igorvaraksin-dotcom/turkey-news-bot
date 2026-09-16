@@ -1,0 +1,29 @@
+name: Daily Turkey News Digest
+
+on:
+  schedule:
+    - cron: '0 5 * * *'  # 05:00 UTC = 08:00 EEST
+  workflow_dispatch:  # для ручного запуску
+
+jobs:
+  send-digest:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+    
+    - name: Run digest generator
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        DIGEST_LANGUAGE: ${{ secrets.DIGEST_LANGUAGE }}
+      run: python main.py
